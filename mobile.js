@@ -23,42 +23,50 @@ class Paper {
     const endEvent = isMobile ? 'touchend' : 'mouseup';
 
     document.addEventListener(moveEvent, (e) => {
-      if (!this.rotating) {
-        if (isMobile) {
-          this.mouseX = e.touches[0].clientX;
-          this.mouseY = e.touches[0].clientY;
-        } else {
-          this.mouseX = e.clientX;
-          this.mouseY = e.clientY;
-        }
+      if (!this.holdingPaper) return;
 
+      // Capture mouse/touch position
+      if (isMobile) {
+        this.mouseX = e.touches[0].clientX;
+        this.mouseY = e.touches[0].clientY;
+      } else {
+        this.mouseX = e.clientX;
+        this.mouseY = e.clientY;
+      }
+
+      // Calculate velocity
+      if (!this.rotating) {
         this.velX = this.mouseX - this.prevMouseX;
         this.velY = this.mouseY - this.prevMouseY;
       }
 
+      // Calculate rotation angle
       const dirX = this.mouseX - this.mouseTouchX;
       const dirY = this.mouseY - this.mouseTouchY;
-      const dirLength = Math.sqrt(dirX * dirX + dirY * dirY);
+      const dirLength = Math.sqrt(dirX * dirX + dirY * dirY) || 1; // Avoid division by zero
       const dirNormalizedX = dirX / dirLength;
       const dirNormalizedY = dirY / dirLength;
 
       const angle = Math.atan2(dirNormalizedY, dirNormalizedX);
       let degrees = (180 * angle) / Math.PI;
       degrees = (360 + Math.round(degrees)) % 360;
+
       if (this.rotating) {
         this.rotation = degrees;
       }
 
-      if (this.holdingPaper) {
-        if (!this.rotating) {
-          this.currentPaperX += this.velX;
-          this.currentPaperY += this.velY;
-        }
-        this.prevMouseX = this.mouseX;
-        this.prevMouseY = this.mouseY;
-
-        paper.style.transform = translateX(${this.currentPaperX}px) translateY(${this.currentPaperY}px) rotateZ(${this.rotation}deg);
+      if (!this.rotating) {
+        // Update position
+        this.currentPaperX += this.velX;
+        this.currentPaperY += this.velY;
       }
+
+      // Apply transform
+      paper.style.transform = `translateX(${this.currentPaperX}px) translateY(${this.currentPaperY}px) rotateZ(${this.rotation}deg)`;
+
+      // Update previous position for next frame
+      this.prevMouseX = this.mouseX;
+      this.prevMouseY = this.mouseY;
     });
 
     paper.addEventListener(startEvent, (e) => {
@@ -71,18 +79,18 @@ class Paper {
       if (isMobile) {
         this.mouseTouchX = e.touches[0].clientX;
         this.mouseTouchY = e.touches[0].clientY;
-        this.prevMouseX = this.mouseTouchX;
-        this.prevMouseY = this.mouseTouchY;
       } else {
-        this.mouseTouchX = this.mouseX;
-        this.mouseTouchY = this.mouseY;
-        this.prevMouseX = this.mouseX;
-        this.prevMouseY = this.mouseY;
+        this.mouseTouchX = e.clientX;
+        this.mouseTouchY = e.clientY;
+
+        if (e.button === 2) { // Right-click to rotate
+          this.rotating = true;
+        }
       }
 
-      if (e.button === 2) {
-        this.rotating = true;
-      }
+      // Set starting previous mouse/touch position
+      this.prevMouseX = this.mouseTouchX;
+      this.prevMouseY = this.mouseTouchY;
     });
 
     window.addEventListener(endEvent, () => {
@@ -98,3 +106,4 @@ papers.forEach((paper) => {
   const p = new Paper();
   p.init(paper);
 });
+
